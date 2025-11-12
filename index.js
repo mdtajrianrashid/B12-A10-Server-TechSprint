@@ -1,3 +1,4 @@
+// server/index.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -10,12 +11,8 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // ---- Firebase Admin Setup ----
-// Make sure the JSON file is in the server folder
 const serviceAccount = require(path.join(__dirname, 'online-learning-platform-a10-firebase-adminsdk-fbsvc-7490a94502.json'));
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 
 // ---- Middleware ----
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || '*', credentials: true }));
@@ -37,8 +34,7 @@ const client = new MongoClient(uri, {
 // ---- Auth Middlewares ----
 async function verifyUser(req, res, next) {
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer '))
-    return res.status(401).send({ error: 'No token' });
+  if (!authHeader?.startsWith('Bearer ')) return res.status(401).send({ error: 'No token' });
   const token = authHeader.split(' ')[1];
   try {
     const decoded = await admin.auth().verifyIdToken(token);
@@ -119,6 +115,50 @@ async function run() {
       const doc = await courses.findOne({ _id: new ObjectId(id) });
       if (!doc) return res.status(404).send({ error: 'Course not found' });
       res.send(doc);
+    });
+
+    // ---- NEW: Featured courses endpoint ----
+    app.get('/featured-courses', async (req, res) => {
+      const limit = Math.min(parseInt(req.query.limit || '6', 10), 100);
+      try {
+        const list = await courses.find({ isFeatured: true }).sort({ createdAt: -1 }).limit(limit).toArray();
+        // Normalize image field names if necessary (some docs use imageUrl)
+        const normalized = list.map(c => ({
+          ...c,
+          image: c.image || c.imageUrl || '',
+        }));
+        res.send(normalized);
+      } catch (err) {
+        console.error('Error fetching featured courses', err);
+        res.status(500).send({ error: 'Server error' });
+      }
+    });
+
+    // ---- NEW: Instructors endpoint ----
+    // Logic: Prefer an instructors collection (role: 'instructor' in users collection). Fall back to distinct instructors from courses.
+    app.get('/instructors', async (req, res) => {
+      const limit = Math.min(parseInt(req.query.limit || '4', 10), 100);
+      try {
+        // Try users collection first
+        const instructorsFromUsers = await users.find({ role: 'instructor' }).limit(limit).toArray();
+        if (instructorsFromUsers.length > 0) {
+          const payload = instructorsFromUsers.slice(0, limit).map(u => ({ name: u.name, email: u.email, photo: u.photo || '' }));
+          return res.send(payload);
+        }
+
+        // Fallback: gather distinct instructor objects from all-courses
+        const pipeline = [
+          { $match: { 'instructor.email': { $exists: true } } },
+          { $group: { _id: '$instructor.email', doc: { $first: '$instructor' } } },
+          { $replaceRoot: { newRoot: '$doc' } },
+          { $limit: limit }
+        ];
+        const list = await courses.aggregate(pipeline).toArray();
+        res.send(list);
+      } catch (err) {
+        console.error('Error fetching instructors', err);
+        res.status(500).send({ error: 'Server error' });
+      }
     });
 
     // ---- Instructor Protected Endpoints ----

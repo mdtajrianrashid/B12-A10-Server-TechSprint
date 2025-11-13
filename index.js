@@ -10,21 +10,22 @@ const path = require('path');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// ---- Firebase Admin Setup ----
-const serviceAccount = require(path.join(__dirname, 'online-learning-platform-a10-firebase-adminsdk-fbsvc-7490a94502.json'));
+// index.js
+const decoded = Buffer.from(process.env.FIREBASE_SERVICE_KEY, "base64").toString("utf8");
+const serviceAccount = JSON.parse(decoded);
+
 admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 
 // ---- Middleware ----
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || '*', credentials: true }));
 app.use(express.json());
 
-// Healthcheck
 app.get('/', (req, res) => res.send({ ok: true, message: 'Server running' }));
 
 // ---- MongoDB Setup ----
 const uri = process.env.MONGODB_URI;
 if (!uri) {
-  console.error('❌ Missing MONGODB_URI');
+  console.error(' Missing MONGODB_URI');
   process.exit(1);
 }
 const client = new MongoClient(uri, {
@@ -220,7 +221,6 @@ async function run() {
       res.send(list);
     });
 
-    // ---- Ping MongoDB ----
     // await client.db('admin').command({ ping: 1 });
     console.log('Connected to MongoDB');
 

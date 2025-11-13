@@ -12,7 +12,7 @@ const port = process.env.PORT || 3000;
 
 // index.js
 const decoded = Buffer.from(process.env.FIREBASE_SERVICE_KEY, "base64").toString("utf8");
-const serviceAccount = JSON.parse(decoded);
+const serviceAccount = require("./online-learning-platform-a10-firebase-adminsdk-fbsvc-7490a94502.json");
 
 admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 

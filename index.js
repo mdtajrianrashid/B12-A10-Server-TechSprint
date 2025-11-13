@@ -117,12 +117,11 @@ async function run() {
       res.send(doc);
     });
 
-    // ---- NEW: Featured courses endpoint ----
+    // ---- Featured courses endpoint ----
     app.get('/featured-courses', async (req, res) => {
       const limit = Math.min(parseInt(req.query.limit || '6', 10), 100);
       try {
         const list = await courses.find({ isFeatured: true }).sort({ createdAt: -1 }).limit(limit).toArray();
-        // Normalize image field names if necessary (some docs use imageUrl)
         const normalized = list.map(c => ({
           ...c,
           image: c.image || c.imageUrl || '',
@@ -134,19 +133,15 @@ async function run() {
       }
     });
 
-    // ---- NEW: Instructors endpoint ----
-    // Logic: Prefer an instructors collection (role: 'instructor' in users collection). Fall back to distinct instructors from courses.
+    // ---- Top Instructors endpoint ----
     app.get('/instructors', async (req, res) => {
       const limit = Math.min(parseInt(req.query.limit || '4', 10), 100);
       try {
-        // Try users collection first
         const instructorsFromUsers = await users.find({ role: 'instructor' }).limit(limit).toArray();
         if (instructorsFromUsers.length > 0) {
           const payload = instructorsFromUsers.slice(0, limit).map(u => ({ name: u.name, email: u.email, photo: u.photo || '' }));
           return res.send(payload);
         }
-
-        // Fallback: gather distinct instructor objects from all-courses
         const pipeline = [
           { $match: { 'instructor.email': { $exists: true } } },
           { $group: { _id: '$instructor.email', doc: { $first: '$instructor' } } },

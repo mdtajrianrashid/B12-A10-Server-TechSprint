@@ -1,4 +1,3 @@
-// server/index.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -11,7 +10,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // index.js
-const decoded = Buffer.from(process.env.FIREBASE_SERVICE_KEY, "base64").toString("utf8");
+// const decoded = Buffer.from(process.env.FIREBASE_SERVICE_KEY, "base64").toString("utf8");
 const serviceAccount = require("./online-learning-platform-a10-firebase-adminsdk-fbsvc-7490a94502.json");
 
 admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
@@ -59,7 +58,7 @@ function checkRole(requiredRole) {
 // ---- Run Server ----
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
     const db = client.db(process.env.DB_NAME);
     const courses = db.collection('all-courses');
     const enrolled = db.collection('enrolled-courses');

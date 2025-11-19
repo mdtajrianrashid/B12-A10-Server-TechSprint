@@ -89,6 +89,18 @@ Full CRUD operations powered by MongoDB:
 
 ---
 
+## 📦 Dependencies
+
+```json```
+"dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "firebase-admin": "^13.6.0",
+    "joi": "^18.0.1",
+    "mongodb": "^7.0.0"
+  }
+
 ## 🏃 Running Locally
 
 To run TechSprint on your local machine, follow these steps:
